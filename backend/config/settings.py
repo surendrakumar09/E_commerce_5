@@ -190,7 +190,7 @@ SIMPLE_JWT = {
 }
 
 # Email Backend Settings for local testing fallback
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = 'config.email_backend.SafeConsoleEmailBackend'
 DEFAULT_FROM_EMAIL = 'DevStack Shop <shop@devstack.local>'
 
 # Razorpay API Credentials
