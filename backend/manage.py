@@ -5,6 +5,8 @@ import sys
 
 def main():
     """Run administrative tasks."""
+    # Ensure backend directory is in sys.path
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
     try:
         # Fallback to PyMySQL if mysqlclient is not installed

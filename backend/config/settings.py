@@ -55,6 +55,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+try:
+    import whitenoise
+    MIDDLEWARE.insert(2, 'whitenoise.middleware.WhiteNoiseMiddleware')
+except ImportError:
+    pass
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -77,6 +83,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database Setup with SQLite Fallback and Automatic MySQL Creation
 DATABASE_URL = env('DATABASE_URL')
+IS_VERCEL = 'VERCEL' in os.environ
+SQLITE_DB_PATH = '/tmp/db.sqlite3' if IS_VERCEL else BASE_DIR / 'db.sqlite3'
+
 try:
     db_config = env.db()
     DATABASES = {
@@ -98,17 +107,18 @@ try:
                 user=user,
                 password=password,
                 port=port,
+                connect_timeout=3,
             )
             with conn.cursor() as cursor:
                 cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;")
             conn.close()
             print(f"--- Database '{db_name}' verified/created ---")
         except Exception as e:
-            print(f"--- Warning: Could not connect to MySQL server at {host}:{port}. Falling back to SQLite for local development. Error: {e} ---")
+            print(f"--- Warning: Could not connect to MySQL server at {host}:{port}. Falling back to SQLite. Error: {e} ---")
             DATABASES = {
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': BASE_DIR / 'db.sqlite3',
+                    'NAME': SQLITE_DB_PATH,
                 }
             }
 except Exception as e:
@@ -116,7 +126,7 @@ except Exception as e:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': SQLITE_DB_PATH,
         }
     }
 
