@@ -18,7 +18,15 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-ecommerce-premium-key-ch
 
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*'])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['*', '.vercel.app', 'localhost', '127.0.0.1'])
+
+# CSRF Trusted Origins for Vercel & Local Development
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    'https://*.vercel.app',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5173',
+])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -81,48 +89,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database Setup with SQLite Fallback and Automatic MySQL Creation
-DATABASE_URL = env('DATABASE_URL')
+# Database Setup with SQLite Fallback and Environment-based parsing
+DATABASE_URL = env('DATABASE_URL', default=None)
 IS_VERCEL = 'VERCEL' in os.environ
 SQLITE_DB_PATH = '/tmp/db.sqlite3' if IS_VERCEL else BASE_DIR / 'db.sqlite3'
 
-try:
-    db_config = env.db()
-    DATABASES = {
-        'default': db_config
-    }
-    
-    # If using MySQL, check connection and create database if not exists
-    if db_config['ENGINE'] == 'django.db.backends.mysql':
-        import pymysql
-        host = db_config.get('HOST') or 'localhost'
-        user = db_config.get('USER') or 'root'
-        password = db_config.get('PASSWORD') or ''
-        port = int(db_config.get('PORT') or 3306)
-        db_name = db_config.get('NAME')
-        
-        try:
-            conn = pymysql.connect(
-                host=host,
-                user=user,
-                password=password,
-                port=port,
-                connect_timeout=3,
-            )
-            with conn.cursor() as cursor:
-                cursor.execute(f"CREATE DATABASE IF NOT EXISTS {db_name} CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;")
-            conn.close()
-            print(f"--- Database '{db_name}' verified/created ---")
-        except Exception as e:
-            print(f"--- Warning: Could not connect to MySQL server at {host}:{port}. Falling back to SQLite. Error: {e} ---")
-            DATABASES = {
-                'default': {
-                    'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME': SQLITE_DB_PATH,
-                }
+if DATABASE_URL and DATABASE_URL != 'mysql://root:admin123@localhost:3306/ecommerce_db':
+    try:
+        DATABASES = {
+            'default': env.db_url_config(DATABASE_URL)
+        }
+    except Exception as e:
+        print(f"--- Warning: DATABASE_URL parsing error ({e}). Falling back to SQLite. ---")
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': SQLITE_DB_PATH,
             }
-except Exception as e:
-    print(f"--- Warning: Database parsing error. Falling back to SQLite. Error: {e} ---")
+        }
+else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

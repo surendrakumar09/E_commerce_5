@@ -23,4 +23,16 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
 from django.core.wsgi import get_wsgi_application
 
-app = get_wsgi_application()
+application = get_wsgi_application()
+app = application
+
+# Run lightweight cold-start auto-migration if using SQLite on Vercel
+try:
+    from django.db import connection
+    if connection.vendor == 'sqlite':
+        tables = connection.introspection.table_names()
+        if 'django_migrations' not in tables:
+            from django.core.management import call_command
+            call_command('migrate', interactive=False)
+except Exception as e:
+    print(f"Auto-migration warning: {e}")
